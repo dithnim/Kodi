@@ -1,18 +1,20 @@
 import speech_recognition as sr
-from random import choice
-import random
 from functions import os_ops
 import os
-import elevenlabs
+import random
 import openai
 import pyscreenshot as ImageGrab
 import string
+import pyttsx3 as tts
+
+code = 0
+engine = tts.init()
+engine.setProperty('rate', 170)
+voices = engine.getProperty('voices')  
+engine.setProperty('voice', voices[1].id)
 
 
-USERNAME = "Adam"
-BOTNAME = "Kodi"
-
-chat_gpt_api = "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"
+chat_gpt_api = "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"
 openai.api_key = chat_gpt_api
 
 def task_list(command):
@@ -21,7 +23,7 @@ def task_list(command):
         os_ops.open_calculator()
 
     elif command in ["chrome","open google chrome","open google","google"]:
-        speak("opening. google")
+        speak("opening. google chrome")
         os_ops.open_chrome()
 
     elif command == 'vscode':
@@ -40,13 +42,13 @@ def task_list(command):
         strt = ''.join(random.choice(string.ascii_lowercase + string.digits) for _ in range(10))
         img = ImageGrab.grab()
         img.save(f"screenshots\\{strt}.jpg")
-        speak("Screenshot saved")
+        speak("Screenshot saved. Openning now")
         img.show()
 
     elif command == 'shutdown':
         speak("are you sure.")
         if (take_user_input() == 'yes'):
-            speak("attempting system shutdown in. 3,  2,  1.")
+            speak("attempting system shutdown")
             os.system("shutdown /s")
         else:
             speak("aborting system shutdown")
@@ -54,90 +56,66 @@ def task_list(command):
 
 
 def get_gpt(prompt):
-        response = openai.ChatCompletion.create(
-        model='gpt-3.5-turbo',
-        messages=[
-            {'role':'user','content':prompt}
-        ]
-    )
-        return response['choices'][0]['message']['content']
+        try:
+                response = openai.ChatCompletion.create(
+                model='gpt-3.5-turbo',
+                messages=[
+                    {'role':'user','content':prompt}
+                ]
+            )
+                res = response['choices'][0]['message']['content']
+        except:
+            res = "Sorry, Servers are unreachable at the moment"
+        return res
 
 
 def speak(text):
-    audio = elevenlabs.generate(
-        text= text,
-        voice = 'Dave',
-        api_key='95bed6567088b2c3f63ecd24376e2b80'
-    )
-    elevenlabs.play(audio)
+    engine.say(text)
+    engine.runAndWait()
 
 def greetuser():
-    speak(get_gpt(f"Your name is {BOTNAME} and your purpose is to be {USERNAME}'s AI assistant and tell the user to say 'hello' to activate"))
+    val = get_gpt(f"Your name is kodi and your purpose is to be Dineth's AI assistant and tell the user to say your name to activate")
+    print('\n'+val)
+    speak(val)
+
 
 def take_user_input():
-    global r;global audio
+    global r;global audio;global code
     r = sr.Recognizer()
     with sr.Microphone() as source:
-        print('Listening....')
+        print('\nListening....')
         r.pause_threshold = 1
         audio = r.listen(source)
     
     try:
-        print('Recognizing...\n')
+        print('Processing...\n')
         query = r.recognize_google(audio)
         print("You said:",query)
         query = query.lower()
-        if not 'exit' in query or 'stop' in query:
-            if not 'open' in query or 'take' in query or 'write' in query:
-                val = get_gpt(query)
-                print("KODI:",val)
-                speak(val)
+
+        if not query in ['exit','stop','goodbye','bye','good bye','see ya']:
+            if 'open' in query or 'take' in query:
+                comm = query.strip().split(' ')
+                task_list(comm[-1])
             elif 'write' in query:
                 speak("sure")
                 val = get_gpt(query)
-                print(val)
+                print(val+"\n")
             else:
-                comm = query.strip().split(' ')
-                task_list(comm[-1])
+                val = get_gpt(query)
+                print("KODI:",val)
+                speak(val)
+                
         else:
-            speak("Goodbye sir.")
-            return query
-    except sr.UnknownValueError:
-        sorry_list = ['Sorry, I could not understand. Could you please say that again?',
-                      'Can you repeat the question please?',
-                      'I am sorry, Can you try again?',
-                      'Sorry, I did not understand. Try checking if your microphone is working properly.',
-                      'sorry, I did not hear anything. Try checking your microphone.']
-        speak(sorry_list[0])
-        query = 'None'
-    return query
-
-def listner():
-    global r;global audio;global query
-    try:
-        print("Say 'Hello' to activate..!")
-        r = sr.Recognizer()
-        with sr.Microphone() as source:
-            r.pause_threshold = 1
-            audio = r.listen(source)
-
-        print("Recognizing....\n")
-        query = r.recognize_google(audio)
-        print("You said:",query)
-        query = query.lower()
-        if query == 'hello':
-            val = get_gpt("greet the user and ask for how to help")
+            val = get_gpt(query)
             print("KODI:",val)
             speak(val)
-            take_user_input()
+            return -1
     except sr.UnknownValueError:
-        sorry_list = ['Sorry, I could not understand. Could you please say that again?',
-                      'Can you repeat the question please?',
-                      'I am sorry, Can you try again?',
-                      'Sorry, I did not understand. Try checking if your microphone is working properly.',
-                      'sorry, I did not hear anything. Try checking your microphone.']
-        speak(sorry_list[0])
-        
-greetuser()
+        query = 'None'
+        return query
+    
 while True:
-    take_user_input()
+    code = take_user_input()
+    if code == -1:
+        break
