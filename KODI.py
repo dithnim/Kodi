@@ -115,6 +115,7 @@ def take_user_input():
         query = 'None'
         return query
     
+greetuser()
 while True:
     code = take_user_input()
     if code == -1:
